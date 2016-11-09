@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>DataExpress测试</title>
+		<script src="libs/jquery/jquery-2.1.1.min.js"></script>
+		<script>
+			(function(){
+				
+				var $DE_get = function(url,vars,onComplete)
+				{
+					var newVars = {
+						projectName : "testPrj",
+						url : url,
+						vars : vars
+					};
+					$.get("http://localhost:8000",newVars,onComplete);
+				}
+				
+				$(function(){
+					$("button").eq(0).click(function(e){
+						var vars = {
+							pramA:"aa",
+							pramB:"bb",
+							pramC:"cc"
+						};
+						$DE_get("http://www.baidu.com",vars,function(data){
+							console.log(data);
+						});
+					});
+					$("button").eq(1).click(function(e){
+						var vars = {
+							pramA:"aa",
+							pramB:"bb",
+							pramC:"cc"
+						};
+						$DE_get("http://www.github.com",vars,function(data){
+							console.log(data);
+						});
+					});
+				});
+				
+			})();
+		</script>
+	</head>
+	<body>
+		<button>Test0</button>
+		<button>Test1</button>
+	</body>
+</html>

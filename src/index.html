@@ -60,7 +60,7 @@
 				var offlineMode = false;
 				
 				http.createServer( (req, res) => {
-					res.writeHead(200);
+					res.writeHead(200,{"Content-Type":"text/plain","Access-Control-Allow-Origin":"*"});
 					if(!isReqOK(req))return res.end("request error");
 					getDataByUrl(req.url,function(data){
 						res.end(data);
@@ -205,7 +205,6 @@
 					return sameVars;
 				}
 				
-				//test
 				$(function(){
 					var cb = $(".title .offlineMode input");
 					cb.on("change",function(e){
