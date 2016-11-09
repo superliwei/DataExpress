@@ -14,7 +14,11 @@ function createWindow () {
   //不使用默认菜单
 	//Menu.setApplicationMenu(null)
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1366, height: 768})
+  mainWindow = new BrowserWindow({
+  	width: 450,
+  	height: 320,
+  	resizable: false
+  })
 
   // and load the index.html of the app.
   mainWindow.loadURL(`file://${__dirname}/src/index.html`)

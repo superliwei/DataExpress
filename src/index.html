@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+    	<script src="libs/jquery/jquery-2.1.1.min.js"></script>
+    	<script>if (window.module) module = window.module;</script>
+    	<style>
+    		html,body
+    		{
+    			margin: 0;
+    			font-family: "微软雅黑";
+    		}
+    		
+    		.title
+    		{
+    			font-size: 18px;
+    			padding: 10px;
+    			background-color: rgba(0,0,0,0.05);
+    			color:#0066ff;
+    		}
+    		
+    		.title span
+    		{
+    			font-size: 13px;
+    			color: rgba(0,0,0,0.3);
+    		}
+    		
+    		.title .offlineMode
+    		{
+    			float: right;
+    			font-size: 16px;
+    			color: #000000;
+    			display: flex;
+    			margin-top: -18px;
+    			align-items: center;
+    		}
+    		
+    		.title .offlineMode input
+    		{
+    			width: 24px;
+    			height: 24px;
+    			margin-top: 6px;
+    		}
+    		
+    		.serv
+    		{
+    			padding: 20px;
+    			color: #666666;
+    		}
+    	</style>
+		<script>
+			(function(){
+				const http = require('http');
+				const querystring = require('querystring');
+				const fs = require('fs');
+				const process = require('process');
+				
+				var offlineMode = false;
+				
+				http.createServer( (req, res) => {
+					res.writeHead(200);
+					if(!isReqOK(req))return res.end("request error");
+					getDataByUrl(req.url,function(data){
+						res.end(data);
+					});
+				}).listen(8000);
+				
+				function getDataByUrl(url,onComplete)
+				{
+					if(offlineMode)
+					{
+						getDataFromLocalByUrl(url,onComplete);
+					}
+					else
+					{
+						getDataFromOnlineByUrl(url,function(data){
+							saveDataToLocal(url,data);
+							onComplete(data);
+						});
+					}
+				}
+				
+				function getDataFromOnlineByUrl(url,onComplete)
+				{
+					var reqObj = getReqObj(url);
+					$.ajax(reqObj.url,{
+						type : "GET",
+						data : reqObj.vars,
+						success : function(data, textStatus, jqXHR){
+							onComplete(data);
+						},
+						error : function(jqXHR, textStatus, errorThrown){
+							onComplete(textStatus);
+						}
+					});
+				}
+				
+				function getDataFromLocalByUrl(url,onComplete)
+				{
+					getLocalFileNameByUrl(url,function(fileName){
+						if(fileName == undefined)
+						{
+							onComplete();
+						}
+						else
+						{
+							var reqObj = getReqObj(url);
+							var rootUrl = process.cwd()+"\\local\\";
+							var projectDir = rootUrl + reqObj.projectName;
+							var fileUrl = projectDir + "\\" + fileName;
+							var str = fs.readFileSync(fileUrl,"utf8");
+							var jsonObj = JSON.parse(str);
+							onComplete(jsonObj.data);
+						}
+					});
+				}
+				
+				function saveDataToLocal(url,data)
+				{
+					var reqObj = getReqObj(url);
+					var rootUrl = process.cwd()+"\\local\\";
+					if(!fs.existsSync(rootUrl))fs.mkdirSync(rootUrl);
+					
+					var projectDir = rootUrl + reqObj.projectName;
+					if(!fs.existsSync(projectDir))fs.mkdirSync(projectDir);
+					
+					getLocalFileNameByUrl(url,function(fileName){
+						fileName = fileName || getNewFileName();
+						var fileUrl = projectDir + "\\" + fileName;
+						fs.writeFileSync(fileUrl,JSON.stringify({
+							url : url,
+							data : data
+						}));
+					});
+				}
+				
+				function getLocalFileNameByUrl(url,onComplete)
+				{
+					var reqObj = getReqObj(url);
+					var rootUrl = process.cwd()+"\\local\\";
+					if(!fs.existsSync(rootUrl))return onComplete();
+					var projectDir = rootUrl + reqObj.projectName;
+					if(!fs.existsSync(projectDir))return onComplete();
+					var files = fs.readdirSync(projectDir);
+					if(files.length > 0)
+					{
+						checkFile(0);
+					}
+					else
+					{
+						onComplete();
+					}
+					
+					function checkFile(idx)
+					{
+						if(idx == files.length)return onComplete();
+						var fileName = files[idx];
+						var fileUrl = projectDir + "\\" + fileName;
+						var str = fs.readFileSync(fileUrl,"utf8");
+						var jsonObj = JSON.parse(str);
+						isSameUrl(jsonObj.url,url) ? onComplete(fileName) : checkFile(idx+1);
+					}
+				}
+				
+				function getNewFileName()
+				{
+					return "data-"+new Date().getTime()+".txt";
+				}
+				
+				function isReqOK(req)
+				{
+					return req.url.split("?").length > 1;
+				}
+				
+				function getReqObj(url)
+				{
+					var arr = url.split("?");
+					var str = arr[arr.length - 1];
+					var obj = querystring.parse(str);
+					return obj;
+				}
+				
+				function isSameUrl(url0,url1)
+				{
+					if(url0 == url1)return true;
+					var reqObj0 = getReqObj(url0);
+					var reqObj1 = getReqObj(url1);
+					if(reqObj0.projectName != reqObj1.projectName)return false;
+					if(reqObj0.url != reqObj1.url)return false;
+					var vars0 = reqObj0.vars;
+					var vars1 = reqObj1.vars;
+					if(JSON.stringify(vars0) == JSON.stringify(vars1))return true;
+					if(Object.getOwnPropertyNames(vars0).length != Object.getOwnPropertyNames(vars1).length)return false;
+					var sameVars = true;
+					for(key in vars0)
+					{
+						if(vars0[key] != vars1[key])
+						{
+							sameVars = false;
+							break;
+						}
+					}
+					return sameVars;
+				}
+				
+				//test
+				$(function(){
+					var cb = $(".title .offlineMode input");
+					cb.on("change",function(e){
+						offlineMode = this.checked;
+					});
+				});
+				
+			})();
+		</script>
+	</head>
+	<body>
+		<div class="title">
+			DataExpress<br/>
+			<span>数据特快专递服务端</span>
+			
+			<div class="offlineMode">
+				<div>离线模式 : </div>
+				<input type="checkbox" />
+			</div>
+		</div>
+		<div class="serv">服务运行地址 : http://localhost:8000</div>
+		
+		<!--
+        	使用方法:
+        	
+        	1.直接象下面使用
+        	var vars = {
+				projectName : "testPrj",
+				url:"http://www.baidu.com",
+				vars : {
+					pramA:"aa",
+					pramB:"bb",
+					pramC:"cc"
+				}
+			};
+			$.get("http://localhost:8000",vars,function(data){
+				console.log(data);
+			});
+			
+			2.封装jQurey的Get方法为$DE_get
+			var vars = {
+				pramA:"aa",
+				pramB:"bb",
+				pramC:"cc"
+			};
+			$DE_get("http://www.baidu.com",vars,function(data){
+				console.log(data);
+			});
+			
+			//封装
+			$DE_get = function(url,vars,onComplete)
+			{
+				var newVars = {
+					projectName : "testPrj",
+					url : url,
+					vars : vars
+				};
+				$.get("http://localhost:8000",newVars,onComplete);
+			}
+        -->
+	</body>
+</html>
