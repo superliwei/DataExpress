@@ -56,8 +56,10 @@
 				const querystring = require('querystring');
 				const fs = require('fs');
 				const process = require('process');
+				const internalIp = require('internal-ip');
 				
 				var offlineMode = false;
+				var port = 8000;
 				
 				http.createServer( (req, res) => {
 					res.writeHead(200,{"Content-Type":"text/plain","Access-Control-Allow-Origin":"*"});
@@ -65,7 +67,7 @@
 					getDataByUrl(req.url,function(data){
 						res.end(data);
 					});
-				}).listen(8000);
+				}).listen(port);
 				
 				function getDataByUrl(url,onComplete)
 				{
@@ -210,6 +212,8 @@
 					cb.on("change",function(e){
 						offlineMode = this.checked;
 					});
+					var ip = internalIp.v4();
+					$(".serv").text("服务运行地址 : http://"+ip+":"+port);
 				});
 				
 			})();
@@ -225,7 +229,7 @@
 				<input type="checkbox" />
 			</div>
 		</div>
-		<div class="serv">服务运行地址 : http://localhost:8000</div>
+		<div class="serv"></div>
 		
 		<!--
         	使用方法:
